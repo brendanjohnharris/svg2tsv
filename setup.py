@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="svg2tsv",
-    version="1.0.1",
+    version="1.1.0",
     description="A command-line tool to extract points from SVG paths and save them as a TSV matrix.",
     author="Brendan Harris",
     author_email="brendanjohnharris@gmail.com",
