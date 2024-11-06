@@ -16,14 +16,8 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "svg2tsv=svg2tsv:main",  # Ensure svg2tsv.py has a main() function
-            "tsv2svg=tsv2svg:main",  # Ensure tsv2svg.py has a main() function
+            "svg2tsv=svg2tsv.svg2tsv:main",
+            "tsv2svg=svg2tsv.tsv2svg:main",
         ],
     },
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
-    python_requires=">=3.6",
 )
