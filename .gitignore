@@ -1,6 +1,8 @@
 dist/
 build/
 src/
+pkg/
+svg2tsv-*
 
 *.tmp
 *.swp
