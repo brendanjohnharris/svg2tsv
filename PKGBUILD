@@ -1,6 +1,6 @@
 # Maintainer: Brendan Harris <brendanjohnharris@gmail.com>
 pkgname=svg2tsv
-pkgver=1.1.0
+pkgver=1.1.1
 pkgrel=1
 pkgdesc="A command-line tool to extract points from SVG paths and save them as a TSV matrix."
 arch=('any')
