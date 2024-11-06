@@ -15,37 +15,43 @@ def sample_path_segment(segment, npoints):
 
 
 def extract_path_points_from_svg(file_path, npoints, filter_option):
-    # Load all paths from the SVG file
-    paths, _ = svg2paths(file_path)
+    # Load all paths and attributes from the SVG file
+    paths, attributes = svg2paths(file_path)
 
     # Filter paths based on the filter_option
     if filter_option == "closed":
-        filtered_paths = [path for path in paths if path.isclosed()]
+        filtered = [
+            (path, attr) for path, attr in zip(paths, attributes) if path.isclosed()
+        ]
     elif filter_option == "open":
-        filtered_paths = [path for path in paths if not path.isclosed()]
+        filtered = [
+            (path, attr) for path, attr in zip(paths, attributes) if not path.isclosed()
+        ]
     else:
-        filtered_paths = paths  # "all"
+        filtered = list(zip(paths, attributes))  # "all"
 
-    if not filtered_paths:
+    if not filtered:
         print(f"No paths match the filter: {filter_option}")
         sys.exit(1)
 
-    # Store the results
     all_path_points = []
+    path_names = []
 
-    for path in filtered_paths:
+    for idx, (path, attr) in enumerate(filtered):
+        name = attr.get("id") or attr.get("name") or f"path{idx+1}"
+        path_names.append(name)
         path_points = []
         for segment in path:
             segment_points = sample_path_segment(segment, npoints)
             path_points.extend(segment_points)
         all_path_points.append(path_points)
 
-    return all_path_points
+    return all_path_points, path_names
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Extract points from SVG paths and save as a TSV matrix. Each SVG path occupies a column."
+        description="Extract points from SVG paths and save as a TSV matrix with headers. Each SVG path occupies a column."
     )
     parser.add_argument(
         "-n",
@@ -57,7 +63,9 @@ def main():
     parser.add_argument(
         "-i", "--input-file", required=True, help="Input SVG file path."
     )
-    parser.add_argument("-o", "--output-file", help="Output file to save the matrix.")
+    parser.add_argument(
+        "-o", "--output-file", help="Output TSV file to save the matrix."
+    )
     parser.add_argument(
         "-f",
         "--filter",
@@ -77,24 +85,29 @@ def main():
         base, _ = os.path.splitext(file_path)
         output_file = f"{base}.tsv"
 
-    # Extract path points with filtering
-    all_path_points = extract_path_points_from_svg(file_path, npoints, filter_option)
+    # Extract path points and names with filtering
+    all_path_points, path_names = extract_path_points_from_svg(
+        file_path, npoints, filter_option
+    )
 
     # Find the maximum number of points among all paths to pad shorter paths
     max_points = max(len(points) for points in all_path_points)
 
-    # Prepare the matrix with empty strings for padding
+    # Prepare the matrix with empty strings for padding, including header row
     matrix = np.full(
-        (max_points, len(all_path_points)),
+        (max_points + 1, len(all_path_points)),
         "",
         dtype="<U26",  # Adjust the Unicode string length as needed
     )
 
+    # Insert headers
+    matrix[0, :] = path_names
+
+    # Insert data
     for idx, path_points in enumerate(all_path_points):
-        # Format each point as a tuple string "(x,y)"
         path_points_array = [f"({pt.real:.6f},{pt.imag:.6f})" for pt in path_points]
         num_points = len(path_points_array)
-        matrix[:num_points, idx] = path_points_array
+        matrix[1 : num_points + 1, idx] = path_points_array
 
     # Save the matrix to the output file as TSV
     np.savetxt(output_file, matrix, delimiter="\t", fmt="%s")

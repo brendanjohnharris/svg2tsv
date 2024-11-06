@@ -8,60 +8,43 @@ import re
 
 
 def parse_tuple(s):
-    """
-    Parses a string tuple "(x,y)" and returns a tuple of floats (x, y).
-    Returns None if the string is empty or malformed.
-    """
-    if not s or s.strip() == "":
-        return None
-    match = re.match(r"\(([^,]+),([^)]+)\)", s.strip())
+    match = re.match(r"\(([^,]+),([^\)]+)\)", s)
     if match:
-        try:
-            x = float(match.group(1))
-            y = float(match.group(2))
-            return (x, y)
-        except ValueError:
-            return None
+        return complex(float(match.group(1)), float(match.group(2)))
     return None
 
 
-def calculate_bounding_box(all_points, padding=10):
-    """
-    Calculates the bounding box for all points and adds padding.
-    Returns (min_x, min_y, max_x, max_y).
-    """
-    x_coords = [pt[0] for pts in all_points for pt in pts]
-    y_coords = [pt[1] for pts in all_points for pt in pts]
-    min_x, max_x = min(x_coords), max(x_coords)
-    min_y, max_y = min(y_coords), max(y_coords)
-    return (min_x - padding, min_y - padding, max_x + padding, max_y + padding)
+def calculate_bounding_box(all_points):
+    min_x = min(point.real for path in all_points for point in path)
+    min_y = min(point.imag for path in all_points for point in path)
+    max_x = max(point.real for path in all_points for point in path)
+    max_y = max(point.imag for path in all_points for point in path)
+    return min_x, min_y, max_x, max_y
 
 
 def tsv_to_svg(input_file, output_file, stroke_color="black", stroke_width=1):
-    # Load the TSV data
     data = np.genfromtxt(input_file, delimiter="\t", dtype=str)
 
-    # Determine number of paths
-    num_columns = data.shape[1]
-    num_paths = num_columns
+    # Extract headers
+    headers = data[0, :]
+    all_path_points = []
+    path_names = headers.tolist()
 
-    all_points = []
-
-    # Collect all points to determine bounding box
-    for i in range(num_paths):
+    # Process each column
+    for idx in range(data.shape[1]):
         path_points = []
-        for row in data[:, i]:
+        for row in data[1:, idx]:
             point = parse_tuple(row)
             if point:
                 path_points.append(point)
-        all_points.append(path_points)
+        all_path_points.append(path_points)
 
-    if not all_points:
+    if not all_path_points:
         print("No valid points found.")
         return
 
     # Calculate bounding box
-    min_x, min_y, max_x, max_y = calculate_bounding_box(all_points)
+    min_x, min_y, max_x, max_y = calculate_bounding_box(all_path_points)
     width = max_x - min_x
     height = max_y - min_y
 
@@ -70,35 +53,37 @@ def tsv_to_svg(input_file, output_file, stroke_color="black", stroke_width=1):
         output_file,
         size=(f"{width}px", f"{height}px"),
         viewBox=f"{min_x} {min_y} {width} {height}",
-        profile="tiny",
     )
 
-    for path_points in all_points:
-        if path_points:
-            dwg.add(
-                dwg.polyline(
-                    path_points,
-                    stroke=stroke_color,
-                    fill="none",
-                    stroke_width=stroke_width,
-                )
+    # Add paths with names from headers
+    for name, path_points in zip(path_names, all_path_points):
+        if not path_points:
+            continue
+        path_data = "M " + " L ".join(f"{pt.real},{pt.imag}" for pt in path_points)
+        dwg.add(
+            dwg.path(
+                d=path_data,
+                stroke=stroke_color,
+                fill="none",
+                stroke_width=stroke_width,
+                id=name,
             )
+        )
 
-    # Save the SVG file
     dwg.save()
-    print(f"SVG file saved to {output_file}")
+    print(f"SVG saved to {output_file}")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Convert a TSV matrix of SVG path points back to an SVG file."
+        description="Convert a TSV matrix with headers back to an SVG file."
     )
     parser.add_argument(
         "-i", "--input-file", required=True, help="Input TSV file path."
     )
-    parser.add_argument("-o", "--output-file", help="Output SVG file path.")
+    parser.add_argument("-o", "--output-file", help="Output SVG file to save.")
     parser.add_argument(
-        "--stroke-color", type=str, default="black", help="Stroke color for SVG paths."
+        "--stroke-color", default="black", help="Stroke color for SVG paths."
     )
     parser.add_argument(
         "--stroke-width", type=float, default=1.0, help="Stroke width for SVG paths."
