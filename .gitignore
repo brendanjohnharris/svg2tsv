@@ -1,0 +1,14 @@
+dist/
+build/
+src/
+
+*.tmp
+*.swp
+
+.DS_Store
+Thumbs.db
+
+*.pyc
+__pycache__/
+
+.fuse**

@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+
+import argparse
+import numpy as np
+import os
+import svgwrite
+import re
+
+
+def parse_tuple(s):
+    """
+    Parses a string tuple "(x,y)" and returns a tuple of floats (x, y).
+    Returns None if the string is empty or malformed.
+    """
+    if not s or s.strip() == "":
+        return None
+    match = re.match(r"\(([^,]+),([^)]+)\)", s.strip())
+    if match:
+        try:
+            x = float(match.group(1))
+            y = float(match.group(2))
+            return (x, y)
+        except ValueError:
+            return None
+    return None
+
+
+def calculate_bounding_box(all_points, padding=10):
+    """
+    Calculates the bounding box for all points and adds padding.
+    Returns (min_x, min_y, max_x, max_y).
+    """
+    x_coords = [pt[0] for pts in all_points for pt in pts]
+    y_coords = [pt[1] for pts in all_points for pt in pts]
+    min_x, max_x = min(x_coords), max(x_coords)
+    min_y, max_y = min(y_coords), max(y_coords)
+    return (min_x - padding, min_y - padding, max_x + padding, max_y + padding)
+
+
+def tsv_to_svg(input_file, output_file, stroke_color="black", stroke_width=1):
+    # Load the TSV data
+    data = np.genfromtxt(input_file, delimiter="\t", dtype=str)
+
+    # Determine number of paths
+    num_columns = data.shape[1]
+    num_paths = num_columns
+
+    all_points = []
+
+    # Collect all points to determine bounding box
+    for i in range(num_paths):
+        path_points = []
+        for row in data[:, i]:
+            point = parse_tuple(row)
+            if point:
+                path_points.append(point)
+        all_points.append(path_points)
+
+    if not all_points:
+        print("No valid points found.")
+        return
+
+    # Calculate bounding box
+    min_x, min_y, max_x, max_y = calculate_bounding_box(all_points)
+    width = max_x - min_x
+    height = max_y - min_y
+
+    # Create an SVG drawing with calculated size and viewBox
+    dwg = svgwrite.Drawing(
+        output_file,
+        size=(f"{width}px", f"{height}px"),
+        viewBox=f"{min_x} {min_y} {width} {height}",
+        profile="tiny",
+    )
+
+    for path_points in all_points:
+        if path_points:
+            dwg.add(
+                dwg.polyline(
+                    path_points,
+                    stroke=stroke_color,
+                    fill="none",
+                    stroke_width=stroke_width,
+                )
+            )
+
+    # Save the SVG file
+    dwg.save()
+    print(f"SVG file saved to {output_file}")
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Convert a TSV matrix of SVG path points back to an SVG file."
+    )
+    parser.add_argument(
+        "-i", "--input-file", required=True, help="Input TSV file path."
+    )
+    parser.add_argument("-o", "--output-file", help="Output SVG file path.")
+    parser.add_argument(
+        "--stroke-color", type=str, default="black", help="Stroke color for SVG paths."
+    )
+    parser.add_argument(
+        "--stroke-width", type=float, default=1.0, help="Stroke width for SVG paths."
+    )
+
+    args = parser.parse_args()
+
+    input_file = args.input_file
+    output_file = args.output_file
+
+    if not output_file:
+        base, _ = os.path.splitext(input_file)
+        output_file = f"{base}.svg"
+
+    tsv_to_svg(input_file, output_file, args.stroke_color, args.stroke_width)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,3 @@
+#! /bin/bash
+svg2tsv -i ./testfiles/test.svg -f "open"
+tsv2svg -i ./testfiles/test.tsv -o ./testfiles/reconstructed.svg
