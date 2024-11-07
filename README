@@ -1,0 +1,49 @@
+# svg2tsv
+
+**svg2tsv** is a command-line tool designed to convert SVG path data into a TSV (Tab-Separated Values) matrix and vice versa.
+
+## Features
+
+- **Convert SVG to TSV:** Extract points from SVG paths and save them as a TSV matrix with headers derived from SVG element names.
+- **Convert TSV to SVG:** Reconstruct SVG files from TSV matrices, preserving the original path names from the TSV headers.
+- **Filter open and closed paths:** Filter paths based on whether they are open or closed.
+- **Customizable resolution:** Specify the number of points to sample per path segment.
+
+## Usage
+
+```bash
+usage: svg2tsv [-h] [-n POINTS_PER_PATH] -i INPUT_FILE [-o OUTPUT_FILE]
+               [-f {all,closed,open}]
+
+Extract points from SVG paths and save as a TSV matrix with headers. Each SVG
+path occupies a column.
+
+options:
+  -h, --help            show this help message and exit
+  -n POINTS_PER_PATH, --points-per-path POINTS_PER_PATH
+                        Number of points to sample per path segment.
+  -i INPUT_FILE, --input-file INPUT_FILE
+                        Input SVG file path.
+  -o OUTPUT_FILE, --output-file OUTPUT_FILE
+                        Output TSV file to save the matrix.
+  -f {all,closed,open}, --filter {all,closed,open}
+                        Filter paths: "all" (default), "closed", or "open".
+```
+
+## Examples
+
+```bash
+#! /bin/bash
+svg2tsv -i test.svg -o test.tsv -f "closed"
+tsv2svg -i test.tsv -o reconstructed.svg
+```
+
+## Installation
+
+```bash
+mkdir build
+cd build
+curl -o PKGBUILD https://raw.githubusercontent.com/brendanjohnharris/svg2tsv/refs/tags/v1.2.0/PKGBUILD
+paru -Bi .
+svg2tsv --help
+```
